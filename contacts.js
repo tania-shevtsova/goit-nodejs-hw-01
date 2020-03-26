@@ -3,7 +3,6 @@ const path = require("path");
 
 const contactsPath = path.join(__dirname, "db", "contacts.json");
 
-// TODO: задокументировать каждую функцию
 function listContacts() {
   fs.readFile(contactsPath, (error, data) => {
     if (error) {
@@ -11,7 +10,6 @@ function listContacts() {
     }
     console.table(JSON.parse(data));
   });
-
 }
 
 function getContactById(contactId) {
@@ -25,24 +23,21 @@ function getContactById(contactId) {
 }
 
 function removeContact(contactId) {
-
   fs.readFile(contactsPath, (error, data) => {
     if (error) {
       throw error;
     }
 
-    const parsed=JSON.parse(data);
+    const parsed = JSON.parse(data);
 
+    const products = [...parsed];
+    const deleted = products.filter(el => el.id !== contactId);
 
-    const products=[...parsed];
-    const deleted= products.filter(el=>el.id!==contactId)
-
-
-    fs.writeFile(contactsPath, JSON.stringify(deleted), (error) => {
+    fs.writeFile(contactsPath, JSON.stringify(deleted), error => {
       if (error) {
         throw err;
       }
-      console.log('DELETED');
+      console.log("DELETED");
       listContacts();
     });
   });
@@ -68,7 +63,6 @@ function addContact(name, email, phone) {
       listContacts();
     });
   });
-
 }
 
 module.exports = {
