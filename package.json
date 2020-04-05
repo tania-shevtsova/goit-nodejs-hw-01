@@ -3,9 +3,20 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "joi": "^14.3.1",
+    "yargs": "^15.3.1"
+  },
+  "devDependencies": {
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.2",
+    "pug": "^2.0.4"
+  },
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index .js",
+    "start": "nodemon api/start.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -17,11 +28,6 @@
   "bugs": {
     "url": "https://github.com/tania-shevtsova/goit-nodejs-hw-01/issues"
   },
-  "homepage": "https://github.com/tania-shevtsova/goit-nodejs-hw-01#readme",
-  "devDependencies": {
-    "nodemon": "^2.0.2"
-  },
-  "dependencies": {
-    "yargs": "^15.3.1"
-  }
+
+  "homepage": "https://github.com/tania-shevtsova/goit-nodejs-hw-01#readme"
 }
