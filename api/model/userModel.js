@@ -38,5 +38,5 @@ async function findUserByEmail(email) {
 async function updateToken(id, updatedToken) {
   return this.findByIdAndUpdate(id, { token: updatedToken });
 }
-const userModel = mongoose.model("Contact", userSchema);
+const userModel = mongoose.model("User", userSchema);
 module.exports = userModel;
