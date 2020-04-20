@@ -15,9 +15,33 @@ userRouter.get(
   UserController.authorize,
   UserController.getCurrentUser
 );
-userRouter.patch(
-  "/login",
-  UserController.validateLogIn,
-  UserController.logIn
+userRouter.patch("/login", UserController.validateLogIn, UserController.logIn);
+
+userRouter.put(
+  "/contacts/:id",
+  UserController.authorize,
+  UserController.validateId,
+  UserController.addContactForUser
 );
+userRouter.delete(
+  "/contacts/:id",
+  UserController.authorize,
+  UserController.validateId,
+  UserController.removeContactFromUser
+);
+
+userRouter.get(
+  "/contacts",
+  UserController.authorize,
+  UserController.paginateContacts
+);
+
+userRouter.patch(
+  "/users/:id",
+  UserController.authorize,
+  UserController.validateId,
+  UserController.validateUpdateUser,
+  UserController.updateUser
+);
+
 module.exports = userRouter;

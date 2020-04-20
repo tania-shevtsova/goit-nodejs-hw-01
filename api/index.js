@@ -5,7 +5,7 @@ const userRouter = require("./router/userRouter");
 require("dotenv").config();
 
 module.exports = class User {
-  constructor() { 
+  constructor() {
     this.server = null;
   }
 

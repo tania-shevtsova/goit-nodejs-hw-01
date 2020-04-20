@@ -1,8 +1,10 @@
 const mongoose = require("mongoose");
 
-const { Schema, 
-    Types: { ObjectId }
-  } = require("mongoose");
+const {
+  Schema,
+  Types: { ObjectId },
+} = require("mongoose");
+const mongoosePaginate = require("mongoose-paginate-v2");
 
 const userSchema = new Schema({
   email: { type: String, required: true, unique: true },
@@ -10,23 +12,24 @@ const userSchema = new Schema({
   subscription: {
     type: String,
     enum: ["free", "pro", "premium"],
-    default: "free"
+    default: "free",
   },
-  token: { type: String, required: false }
+  token: { type: String, required: false },
+  contacts: [{ type: ObjectId, ref: "Contact" }],
 });
 
 userSchema.statics.findUserByIdAndUpdate = findUserByIdAndUpdate;
 userSchema.statics.findUserByEmail = findUserByEmail;
-userSchema.statics.updateToken=updateToken;
+userSchema.statics.updateToken = updateToken;
 
 async function findUserByIdAndUpdate(userId, updateParams) {
   return this.findByIdAndUpdate(
     userId,
     {
-      $set: updateParams
+      $set: updateParams,
     },
     {
-      new: true
+      new: true,
     }
   );
 }
