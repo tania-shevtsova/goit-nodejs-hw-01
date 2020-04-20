@@ -1,3 +1,3 @@
-const UsersServer = require("./index");
+const Contacts = require("./index");
 
-new UsersServer().start();
+new Contacts().start();

@@ -1,20 +1,19 @@
-const functions = require("./contacts");
-const argv = require("yargs").argv;
-const morgan = require("morgan");
-const cors = require("cors");
 const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
 const contactRouter = require("./router/contacts.router");
 require("dotenv").config();
 
-module.exports = class ContactsServer {
+module.exports = class Contacts {
   constructor() {
     this.server = null;
   }
 
-  start() {
+  async start() {
     this.initServer();
     this.initMiddleWares();
     this.initRoutes();
+    await this.initDB();
     this.startListening();
   }
 
@@ -29,6 +28,17 @@ module.exports = class ContactsServer {
 
   initRoutes() {
     this.server.use("/api/contacts", contactRouter);
+  }
+
+  async initDB() {
+    try {
+      await mongoose.connect(process.env.URL_MONGODB, () => {
+        console.log("Database connection successful");
+      });
+    } catch (err) {
+      console.log("AN ERROR OCCURED", err);
+      process.exit(1);
+    }
   }
 
   startListening() {

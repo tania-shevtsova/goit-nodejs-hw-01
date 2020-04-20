@@ -4,15 +4,24 @@ const ContactController = require("../controllers/contactController");
 const contactRouter = express.Router();
 
 contactRouter.get("/", ContactController.listContacts);
-contactRouter.get("/:contactId", ContactController.getContactById);
 contactRouter.post(
   "/",
   ContactController.validateAddContact,
   ContactController.addContact
 );
-contactRouter.delete("/:contactId", ContactController.removeContact);
+contactRouter.get(
+  "/:contactId",
+  ContactController.validateId,
+  ContactController.getContactById
+);
+contactRouter.delete(
+  "/:contactId",
+  ContactController.validateId,
+  ContactController.removeContact
+);
 contactRouter.patch(
   "/:contactId",
+  ContactController.validateId,
   ContactController.validateUpdateContact,
   ContactController.updateContact
 );
