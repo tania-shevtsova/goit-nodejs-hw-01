@@ -1,3 +1,3 @@
-const Contacts = require("./index");
+const User = require("./index");
 
-new Contacts().start();
+new User().start();
