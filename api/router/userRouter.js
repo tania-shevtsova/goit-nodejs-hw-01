@@ -15,6 +15,7 @@ userRouter.get(
   UserController.authorize,
   UserController.getCurrentUser
 );
+userRouter.get('/', UserController.filterUsersBySub);
 userRouter.patch("/login", UserController.validateLogIn, UserController.logIn);
 
 userRouter.put(

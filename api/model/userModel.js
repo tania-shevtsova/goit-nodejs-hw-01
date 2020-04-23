@@ -15,7 +15,6 @@ const userSchema = new Schema({
     default: "free",
   },
   token: { type: String, required: false },
-  contacts: [{ type: ObjectId, ref: "Contact" }],
 });
 
 userSchema.statics.findUserByIdAndUpdate = findUserByIdAndUpdate;

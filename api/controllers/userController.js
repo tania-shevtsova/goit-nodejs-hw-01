@@ -38,6 +38,41 @@ class UserController {
     return this._paginateContacts.bind(this);
   }
 
+  get filterUsersBySub() {
+    return this._filterUsersBySub.bind(this);
+  }
+
+  async _filterUsersBySub(req, res, next) {
+    try {
+      const users = await userModel.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "subscription",
+            foreignField: "subscription",
+            as: "users",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$users",
+          },
+        },
+
+        {
+          $match: {
+            "users.subscription": req.query.sub,
+          },
+        },
+      ]);
+
+      return res.status(200).json(this.userResponse(users));
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async _getCurrentUser(req, res, next) {
     try {
       const [userRes] = this.userResponse([req.user]);
@@ -336,6 +371,40 @@ class UserController {
     }
 
     next();
+  }
+
+  get listUsers() {
+    return this._listUsers.bind(this);
+  }
+  async _listUsers(req, res, next) {
+    try {
+      const users = await userModel.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "subscription",
+            foreignField: "subscription",
+            as: "users",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$users",
+          },
+        },
+
+        {
+          $match: {
+            "users.subscription": req.query.sub,
+          },
+        },
+      ]);
+
+      return res.status(200).json(this.userResponse(users));
+    } catch (err) {
+      next(err);
+    }
   }
 
   async authorize(req, res, next) {
