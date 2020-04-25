@@ -32,7 +32,7 @@ module.exports = class User {
 
   async initDB() {
     try {
-      await mongoose.connect(process.env.URL_MONGODB, () => {
+      await mongoose.connect(process.env.URL_MONGODB, {useNewUrlParser: true, useUnifiedTopology: true }, () => {
         console.log("Database connection successful");
       });
     } catch (err) {

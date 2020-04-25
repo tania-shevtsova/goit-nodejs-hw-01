@@ -320,18 +320,6 @@ class UserController {
     next();
   }
 
-  validateContactForUser(req, res, next) {
-    const validRules = Joi.object({
-      subscription: Joi.string().required(),
-    });
-
-    const result = Joi.validate(req.body, validRules);
-    if (result.error) {
-      return res.status(400).send(result.error);
-    }
-    next();
-  }
-
   validateId(req, res, next) {
     const id = req.params.id;
     if (!ObjectId.isValid(id)) {
