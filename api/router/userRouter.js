@@ -5,18 +5,13 @@ const path = require("path");
 const imagemin = require("imagemin");
 const imageminJpegtran = require("imagemin-jpegtran");
 const imageminPngquant = require("imagemin-pngquant");
-const {promises: fsPromises} =require('fs')
-// const upload=multer({dest: 'api/public/images'});
-
-
+const { promises: fsPromises } = require("fs");
 
 const userRouter = express.Router();
 
 const storage = multer.diskStorage({
   destination: "api/public/images",
   filename: function (req, file, cb) {
-    // console.log('REQ', req);
-    // console.log('FILE', file);
     const extension = path.parse(file.originalname).ext;
     cb(null, Date.now() + extension);
   },
@@ -24,110 +19,25 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// userRouter.post("/multiform", generateAvatar, (req, res, next) => {
-//   console.log("req.file", req.file);
-//   res.status(200).send(req.file);
-// });
+userRouter.post("/register", function (req, res) {
+  UserController.validateRegisterUser, UserController.registerUser;
+});
 
-userRouter.post(
-  "/register",
-  function(req, res){
+userRouter.patch("/logout", function (req, res) {
+  UserController.authorize, UserController.logOut;
+});
 
-    UserController.validateRegisterUser,
-    UserController.registerUser
-  }
-);
-
-userRouter.patch("/logout", function(req, res){UserController.authorize, UserController.logOut});
-
-userRouter.get(
-  "/users/current",
-  function(req, res){
-  UserController.authorize,
-  UserController.getCurrentUser
-  }
-);
-userRouter.get("/", function(req, res){UserController.filterUsersBySub});
 userRouter.patch("/login", UserController.validateLogIn, UserController.logIn);
 
-userRouter.put(
-  "/contacts/:id",
-  function(req, res){
-  UserController.authorize,
-  UserController.validateId,
-  UserController.addContactForUser
-  }
-);
-userRouter.delete(
-  "/contacts/:id",
-  function(req, res){
-  UserController.authorize,
-  UserController.validateId,
-  UserController.removeContactFromUser
-  }
-);
-
-userRouter.get(
-  "/contacts",
-  function(req, res){
-  UserController.authorize,
-  UserController.paginateContacts
-  }
-);
-
 userRouter.patch(
-  "/users/:id", 
-//  function(req, res){
+  "/users/:id",
+  //  function(req, res){
   UserController.authorize,
   UserController.validateId,
   UserController.validateUpdateUser,
-  upload.single('avatar'),
+  upload.single("avatar"),
   UserController.updateUser
-//  }
+  //  }
 );
-
-// async function generateAvatar(req, res, next){
-//   try{
-//     const hash = crypto.createHash('md5').update("example@hotmail.com").digest("hex");
-// request("https://www.gravatar.com/avatar/"+hash+".jpg",function(err,response,body){
-// 	if (!err){
-// 		console.log("Got image: "+body);
-// 	}else{
-// 		console.log("Error: "+err);
-// 	}
-// })
-//   }
-//   catch(err){
-//     next(err)
-//   }
-// }
-
-async function minifyImage(req, res, next) {
-  try{
-  const MINIFIED_DIR = "api/public/images";
-  await imagemin([req.file.path], {
-    destination: MINIFIED_DIR,
-    plugins: [
-      imageminJpegtran(),
-      imageminPngquant({
-        quality: [0.6, 0.8],
-      }),
-    ],
-  });
-
-  const { filename, path: tmpPath } = req.file;
-  // await fsPromises.unlink(tmpPath);
-  req.file = {
-    ...req.file,
-    path: path.join(MINIFIED_DIR, filename),
-    destination: MINIFIED_DIR,
-  };
-  console.log('minified', req.file);
-  next();
-}
-catch(err){
-  next(err)
-}
-}
 
 module.exports = userRouter;

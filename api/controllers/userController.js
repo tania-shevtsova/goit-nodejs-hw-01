@@ -11,85 +11,18 @@ const contactModel = require("../model/contactModel");
 const crypto = require("crypto");
 const request = require("request");
 const fs = require("fs");
-const path=require('path')
-const fsExtra=require('fs-extra')
+const path = require("path");
 
 class UserController {
   constructor() {
     this.costFactor = 4;
   }
-
-  get getCurrentUser() {
-    return this._getCurrentUser.bind(this);
-  }
-
   get registerUser() {
     return this._registerUser.bind(this);
   }
 
   get updateUser() {
     return this._updateUser.bind(this);
-  }
-
-  get addContactForUser() {
-    return this._addContactForUser.bind(this);
-  }
-
-  get removeContactFromUser() {
-    return this._removeContactFromUser.bind(this);
-  }
-
-  get paginateContacts() {
-    return this._paginateContacts.bind(this);
-  }
-
-  get filterUsersBySub() {
-    return this._filterUsersBySub.bind(this);
-  }
-
-  async _filterUsersBySub(req, res, next) {
-    try {
-      const users = await userModel.aggregate([
-        {
-          $lookup: {
-            from: "users",
-            localField: "subscription",
-            foreignField: "subscription",
-            as: "users",
-          },
-        },
-
-        {
-          $unwind: {
-            path: "$users",
-          },
-        },
-
-        {
-          $match: {
-            "users.subscription": req.query.sub,
-          },
-        },
-      ]);
-
-      return res.status(200).json(this.userResponse(users));
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  async _getCurrentUser(req, res, next) {
-    try {
-      const [userRes] = this.userResponse([req.user]);
-      res.status(200).json({
-        Status: `${res.statusCode} OK`,
-        ContentType: "application/json",
-        Method: req.method,
-        ResponseBody: userRes,
-      });
-    } catch (err) {
-      next(err);
-    }
   }
 
   async _registerUser(req, res, next) {
@@ -111,18 +44,20 @@ class UserController {
 
       const hash = crypto.createHash("md5").update(email).digest("hex");
 
-      let a = request(
+      /*Requesting avatar*/
+      let requestUrl = request(
         "https://www.gravatar.com/avatar/" + hash + "?d=monsterid",
-        function (err, response, body) {
+        function (err, res, body) {
           if (!err) {
             console.log("Got image: ");
           } else {
-            console.log("Error: " + err);
+            console.log(err);
           }
         }
       );
 
-      const write = a.uri.href;
+      /** Retrieve url, then save it to tmp directory, then move to public/images  */
+      const write = requestUrl.uri.href;
 
       const user = await userModel.create({
         email,
@@ -130,17 +65,19 @@ class UserController {
         subscription,
         avatarURL: write,
       });
-      request(write).pipe(fs.createWriteStream(path.join('tmp', Date.now()+'.png')));
-       fs.readdir('tmp', (err, data) => {
+      request(write).pipe(
+        fs.createWriteStream(path.join("tmp", Date.now() + ".png"))
+      );
+      fs.readdir("tmp", (err, data) => {
         if (err) throw err;
-        data.map(el=>{
-           fs.rename(`tmp/${el}`, `api/public/images/${el}`, function (err) {
-            if (err) throw err
-            console.log('Successfully moved!')
+        data.map((el) => {
+          fs.rename(`tmp/${el}`, `api/public/images/${el}`, function (err) {
+            if (err) throw err;
+            console.log("Successfully moved!");
           });
-        })
+        });
       });
-      
+
       return res.status(201).json({
         Status: `${res.statusCode} Created`,
         ContentType: "application/json",
@@ -153,7 +90,7 @@ class UserController {
         },
       });
     } catch (err) {
-      console.log(err)
+      console.log(err);
       next(err);
     }
   }
@@ -223,30 +160,23 @@ class UserController {
   async _updateUser(req, res, next) {
     try {
       const id = req.params.id;
-      console.log('req', req.headers['content-type'])
-      // req.headers['content-type']==='application/json' && 
       let updatedUser;
-      if(req.headers['content-type']=== 'application/json'){
+      if (req.headers["content-type"] === "application/json") {
         updatedUser = await userModel.findByIdAndUpdate(
           id,
-          {$set: req.body},
+          { $set: req.body },
+          { new: true }
+        );
+      } else {
+        updatedUser = await userModel.findByIdAndUpdate(
+          id,
+          { $set: { avatarURL: req.file.filename } },
           { new: true }
         );
       }
-
-        else {
-        updatedUser = await userModel.findByIdAndUpdate(
-          id,
-          { $set: { avatarURL: req.file.filename }},
-          { new: true }
-        );
-      }
-
-      console.log('updatedUser', updatedUser)
       if (!updatedUser) {
         return res.status(404).json({ message: "Not found" });
       }
-      console.log(updatedUser)
       return res.status(200).json(this.userResponse([updatedUser]));
     } catch (err) {
       next(err);
@@ -258,7 +188,7 @@ class UserController {
       email: Joi.string(),
       password: Joi.string(),
       subscription: Joi.string(),
-      avatarURL: Joi.string()
+      avatarURL: Joi.string(),
     });
     const result = Joi.validate(req.body, updateContactRules);
     if (result.error) {
