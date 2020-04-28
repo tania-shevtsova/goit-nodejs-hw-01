@@ -23,6 +23,7 @@ module.exports = class User {
 
   initMiddleWares() {
     this.server.use(express.json());
+    this.server.use(express.static('api/public'))
     this.server.use(cors({ origin: "http://localhost:3000" }));
   }
 

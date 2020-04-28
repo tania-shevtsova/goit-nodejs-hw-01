@@ -8,6 +8,9 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const { UnauthorizedError } = require("../helpers/errors");
 const contactModel = require("../model/contactModel");
+const crypto = require("crypto");
+const request = require("request");
+const fs=require('fs')
 
 class UserController {
   constructor() {
@@ -89,11 +92,12 @@ class UserController {
 
   async _registerUser(req, res, next) {
     try {
-      const { email, password, subscription } = req.body;
+      const { email, password, subscription, avatarURL } = req.body;
 
       const passwordHash = await bcrypt.hash(password, this.costFactor);
 
       const doesUserExist = await userModel.findUserByEmail(email);
+      // const avatarUrl = userModel.findOne({ avatarURL });
 
       if (doesUserExist) {
         return res.status(409).json({
@@ -104,10 +108,39 @@ class UserController {
         });
       }
 
+  
+
+      const hash = crypto.createHash("md5").update(email).digest("hex");
+
+      let a = request(
+        "https://www.gravatar.com/avatar/" + hash + "?d=monsterid",
+        function (err, response, body) {
+          if (!err) {
+            console.log("Got image: " + body);
+          } else {
+            console.log("Error: " + err);
+          }
+        }
+      );
+
+      const write = a.uri.href;
+      // request(write).pipe(
+      //   fs.createWriteStream(`tmp/${write}`, write, (err) => {
+      //     if (err) {
+      //       console.log(err);
+      //     }
+      //   })
+      // );
+
+      // console.log(write);
+
+      
+
       const user = await userModel.create({
         email,
         password: passwordHash,
         subscription,
+        avatarURL: write,
       });
       return res.status(201).json({
         Status: `${res.statusCode} Created`,
@@ -117,6 +150,7 @@ class UserController {
           id: user._id,
           email: user.email,
           subscription: user.subscription,
+          avatarURL: user.avatarURL
         },
       });
     } catch (err) {
