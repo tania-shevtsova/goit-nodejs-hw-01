@@ -12,6 +12,7 @@ const crypto = require("crypto");
 const request = require("request");
 const fs = require("fs");
 const path=require('path')
+const fsExtra=require('fs-extra')
 
 class UserController {
   constructor() {
@@ -93,10 +94,12 @@ class UserController {
 
   async _registerUser(req, res, next) {
     try {
+      console.log('here')
       const { email, password, subscription, avatarURL } = req.body;
 
       const passwordHash = await bcrypt.hash(password, this.costFactor);
 
+      console.log(email)
       const doesUserExist = await userModel.findUserByEmail(email);
       // const avatarUrl = userModel.findOne({ avatarURL });
 
@@ -121,6 +124,7 @@ class UserController {
           }
         }
       );
+      console.log(22)
 
       const write = a.uri.href;
 
@@ -130,15 +134,18 @@ class UserController {
         subscription,
         avatarURL: write,
       });
-      request(write).pipe(fs.createWriteStream(path.join('tmp', Date.now()+'.png')))
+      request(write).pipe(fs.createWriteStream(path.join('tmp', Date.now()+'.png')));
 
-        // console.log(save)
-        // fs.writeFile(`tmp/${save.path}`, save, (err)=>{
-        //   if(err){
-        //     console.log(err)
-        //   }
-        //   console.log('done')
-        // })
+
+      await fs.readdirSync('tmp/', (err, data) => {
+        if (err) {throw err};
+        data.map(el=>{
+           fs.rename(`tmp/${el}`, `api/public/images/${el}`, function (err) {
+            if (err) throw err
+            console.log('Successfully renamed - AKA moved!')
+          });
+        })
+      });
       
       return res.status(201).json({
         Status: `${res.statusCode} Created`,
@@ -152,6 +159,7 @@ class UserController {
         },
       });
     } catch (err) {
+      console.log(err)
       next(err);
     }
   }
