@@ -10,7 +10,8 @@ const { UnauthorizedError } = require("../helpers/errors");
 const contactModel = require("../model/contactModel");
 const crypto = require("crypto");
 const request = require("request");
-const fs=require('fs')
+const fs = require("fs");
+const path=require('path')
 
 class UserController {
   constructor() {
@@ -108,8 +109,6 @@ class UserController {
         });
       }
 
-  
-
       const hash = crypto.createHash("md5").update(email).digest("hex");
 
       let a = request(
@@ -124,17 +123,6 @@ class UserController {
       );
 
       const write = a.uri.href;
-      // request(write).pipe(
-      //   fs.createWriteStream(`tmp/${write}`, write, (err) => {
-      //     if (err) {
-      //       console.log(err);
-      //     }
-      //   })
-      // );
-
-      // console.log(write);
-
-      
 
       const user = await userModel.create({
         email,
@@ -142,6 +130,16 @@ class UserController {
         subscription,
         avatarURL: write,
       });
+      request(write).pipe(fs.createWriteStream(path.join('tmp', Date.now()+'.png')))
+
+        // console.log(save)
+        // fs.writeFile(`tmp/${save.path}`, save, (err)=>{
+        //   if(err){
+        //     console.log(err)
+        //   }
+        //   console.log('done')
+        // })
+      
       return res.status(201).json({
         Status: `${res.statusCode} Created`,
         ContentType: "application/json",
@@ -150,7 +148,7 @@ class UserController {
           id: user._id,
           email: user.email,
           subscription: user.subscription,
-          avatarURL: user.avatarURL
+          avatarURL: user.avatarURL,
         },
       });
     } catch (err) {
