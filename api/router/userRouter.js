@@ -12,17 +12,17 @@ const {promises: fsPromises} =require('fs')
 
 const userRouter = express.Router();
 
-// const storage = multer.diskStorage({
-//   destination: "tmp",
-//   filename: function (req, file, cb) {
-//     console.log('REQ', req);
-//     console.log('FILE', file);
-//     const extension = path.parse(file.originalname).ext;
-//     cb(null, Date.now() + extension);
-//   },
-// });
+const storage = multer.diskStorage({
+  destination: "api/public/images",
+  filename: function (req, file, cb) {
+    // console.log('REQ', req);
+    // console.log('FILE', file);
+    const extension = path.parse(file.originalname).ext;
+    cb(null, Date.now() + extension);
+  },
+});
 
-// const upload = multer({ storage: storage });
+const upload = multer({ storage: storage });
 
 // userRouter.post("/multiform", generateAvatar, (req, res, next) => {
 //   console.log("req.file", req.file);
@@ -31,45 +31,59 @@ const userRouter = express.Router();
 
 userRouter.post(
   "/register",
-  UserController.validateRegisterUser,
-  UserController.registerUser
+  function(req, res){
+
+    UserController.validateRegisterUser,
+    UserController.registerUser
+  }
 );
 
-userRouter.patch("/logout", UserController.authorize, UserController.logOut);
+userRouter.patch("/logout", function(req, res){UserController.authorize, UserController.logOut});
 
 userRouter.get(
   "/users/current",
+  function(req, res){
   UserController.authorize,
   UserController.getCurrentUser
+  }
 );
-userRouter.get("/", UserController.filterUsersBySub);
+userRouter.get("/", function(req, res){UserController.filterUsersBySub});
 userRouter.patch("/login", UserController.validateLogIn, UserController.logIn);
 
 userRouter.put(
   "/contacts/:id",
+  function(req, res){
   UserController.authorize,
   UserController.validateId,
   UserController.addContactForUser
+  }
 );
 userRouter.delete(
   "/contacts/:id",
+  function(req, res){
   UserController.authorize,
   UserController.validateId,
   UserController.removeContactFromUser
+  }
 );
 
 userRouter.get(
   "/contacts",
+  function(req, res){
   UserController.authorize,
   UserController.paginateContacts
+  }
 );
 
 userRouter.patch(
-  "/users/:id",
+  "/users/:id", 
+//  function(req, res){
   UserController.authorize,
   UserController.validateId,
   UserController.validateUpdateUser,
+  upload.single('avatar'),
   UserController.updateUser
+//  }
 );
 
 // async function generateAvatar(req, res, next){

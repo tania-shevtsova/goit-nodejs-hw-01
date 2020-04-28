@@ -94,14 +94,11 @@ class UserController {
 
   async _registerUser(req, res, next) {
     try {
-      console.log('here')
       const { email, password, subscription, avatarURL } = req.body;
 
       const passwordHash = await bcrypt.hash(password, this.costFactor);
 
-      console.log(email)
       const doesUserExist = await userModel.findUserByEmail(email);
-      // const avatarUrl = userModel.findOne({ avatarURL });
 
       if (doesUserExist) {
         return res.status(409).json({
@@ -118,13 +115,12 @@ class UserController {
         "https://www.gravatar.com/avatar/" + hash + "?d=monsterid",
         function (err, response, body) {
           if (!err) {
-            console.log("Got image: " + body);
+            console.log("Got image: ");
           } else {
             console.log("Error: " + err);
           }
         }
       );
-      console.log(22)
 
       const write = a.uri.href;
 
@@ -135,14 +131,12 @@ class UserController {
         avatarURL: write,
       });
       request(write).pipe(fs.createWriteStream(path.join('tmp', Date.now()+'.png')));
-
-
-      await fs.readdirSync('tmp/', (err, data) => {
-        if (err) {throw err};
+       fs.readdir('tmp', (err, data) => {
+        if (err) throw err;
         data.map(el=>{
            fs.rename(`tmp/${el}`, `api/public/images/${el}`, function (err) {
             if (err) throw err
-            console.log('Successfully renamed - AKA moved!')
+            console.log('Successfully moved!')
           });
         })
       });
@@ -229,118 +223,31 @@ class UserController {
   async _updateUser(req, res, next) {
     try {
       const id = req.params.id;
+      console.log('req', req.headers['content-type'])
+      // req.headers['content-type']==='application/json' && 
+      let updatedUser;
+      if(req.headers['content-type']=== 'application/json'){
+        updatedUser = await userModel.findByIdAndUpdate(
+          id,
+          {$set: req.body},
+          { new: true }
+        );
+      }
 
-      const updatedUser = await userModel.findByIdAndUpdate(
-        id,
-        { $set: req.body },
-        { new: true }
-      );
+        else {
+        updatedUser = await userModel.findByIdAndUpdate(
+          id,
+          { $set: { avatarURL: req.file.filename }},
+          { new: true }
+        );
+      }
+
+      console.log('updatedUser', updatedUser)
       if (!updatedUser) {
         return res.status(404).json({ message: "Not found" });
       }
+      console.log(updatedUser)
       return res.status(200).json(this.userResponse([updatedUser]));
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  async _addContactForUser(req, res, next) {
-    try {
-      const contactId = req.params.id;
-      const contact = await contactModel.findById(contactId);
-      if (!contact) {
-        return res.status(404).send("Contact doesnt exist");
-      }
-
-      await userModel.findByIdAndUpdate(
-        req.user._id,
-        {
-          $push: { contacts: contactId, $sort: { name: 1 } },
-        },
-        {
-          new: true,
-        }
-      );
-
-      const usersWithContacts = await userModel.aggregate([
-        { $match: { _id: req.user._id } },
-        {
-          $lookup: {
-            from: "contacts",
-            localField: "contacts",
-            foreignField: "_id",
-            as: "contacts",
-          },
-        },
-      ]);
-
-      return res.status(200).json(this.userResponse(usersWithContacts));
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  async _paginateContacts(req, res, next) {
-    try {
-      const options = {
-        page: parseInt(req.query.page, 10) || 0,
-        limit: parseInt(req.query.limit, 10) || 10,
-        offset: req.query.page > 0 ? (req.query.page - 1) * req.query.limit : 0,
-        sort: { name: 1 },
-      };
-      await contactModel.paginate({}, options, function (err, result) {
-        if (err) {
-          res.status(500).json(err);
-          return;
-        }
-        res.status(200).json(result);
-      });
-
-      // let perPage = 10;
-      // let page = parseInt(req.query.page, 10) || 0;
-      // let limit = parseInt(req.query.limit, 10) || perPage;
-
-      // const a = await contactModel
-      //   .find()
-      //   .skip(page > 0 ? (page - 1) * limit : 0)
-      //   .limit(limit)
-      //   .sort({ name: 1 })
-      //   .exec(function (err, body) {
-      //     if (err) {
-      //       res.status(500).json(err);
-      //       return;
-      //     }
-      //     res.status(200).json(body);
-      //   });
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  async _removeContactFromUser(req, res, next) {
-    try {
-      const contactId = req.params.id;
-      await userModel.findByIdAndUpdate(
-        req.user._id,
-        {
-          $pull: { contacts: contactId },
-        },
-        {
-          new: true,
-        }
-      );
-      const usersWithContacts = await userModel.aggregate([
-        {
-          $lookup: {
-            from: "contacts",
-            localField: "contacts",
-            foreignField: "_id",
-            as: "contacts",
-          },
-        },
-      ]);
-
-      return res.status(200).json(this.userResponse(usersWithContacts));
     } catch (err) {
       next(err);
     }
@@ -351,6 +258,7 @@ class UserController {
       email: Joi.string(),
       password: Joi.string(),
       subscription: Joi.string(),
+      avatarURL: Joi.string()
     });
     const result = Joi.validate(req.body, updateContactRules);
     if (result.error) {
@@ -401,40 +309,6 @@ class UserController {
     next();
   }
 
-  get listUsers() {
-    return this._listUsers.bind(this);
-  }
-  async _listUsers(req, res, next) {
-    try {
-      const users = await userModel.aggregate([
-        {
-          $lookup: {
-            from: "users",
-            localField: "subscription",
-            foreignField: "subscription",
-            as: "users",
-          },
-        },
-
-        {
-          $unwind: {
-            path: "$users",
-          },
-        },
-
-        {
-          $match: {
-            "users.subscription": req.query.sub,
-          },
-        },
-      ]);
-
-      return res.status(200).json(this.userResponse(users));
-    } catch (err) {
-      next(err);
-    }
-  }
-
   async authorize(req, res, next) {
     try {
       const authHeader = req.get("Authorization") || "";
@@ -471,8 +345,8 @@ class UserController {
 
   userResponse(users) {
     return users.map((user) => {
-      const { email, subscription, _id, contacts } = user;
-      return { email, subscription, _id, contacts };
+      const { email, subscription, _id, contacts, avatarURL } = user;
+      return { email, subscription, _id, contacts, avatarURL };
     });
   }
 }
