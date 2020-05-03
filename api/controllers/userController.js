@@ -7,11 +7,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const { UnauthorizedError } = require("../helpers/errors");
-const contactModel = require("../model/contactModel");
-const crypto = require("crypto");
-const request = require("request");
-const fs = require("fs");
-const path = require("path");
+const sgMail = require("@sendgrid/mail");
+const { totp } =require('otplib');
 
 class UserController {
   constructor() {
@@ -27,7 +24,7 @@ class UserController {
 
   async _registerUser(req, res, next) {
     try {
-      const { email, password, subscription, avatarURL } = req.body;
+      const { email, password, subscription } = req.body;
 
       const passwordHash = await bcrypt.hash(password, this.costFactor);
 
@@ -42,41 +39,15 @@ class UserController {
         });
       }
 
-      const hash = crypto.createHash("md5").update(email).digest("hex");
-
-      /*Requesting avatar*/
-      let requestUrl = request(
-        "https://www.gravatar.com/avatar/" + hash + "?d=monsterid",
-        function (err, res, body) {
-          if (!err) {
-            console.log("Got image: ");
-          } else {
-            console.log(err);
-          }
-        }
-      );
-
-      /** Retrieve url, then save it to tmp directory, then move to public/images  */
-      const write = requestUrl.uri.href;
+     
 
       const user = await userModel.create({
         email,
         password: passwordHash,
-        subscription,
-        avatarURL: write,
+        subscription
       });
-      request(write).pipe(
-        fs.createWriteStream(path.join("tmp", Date.now() + ".png"))
-      );
-      fs.readdir("tmp", (err, data) => {
-        if (err) throw err;
-        data.map((el) => {
-          fs.rename(`tmp/${el}`, `api/public/images/${el}`, function (err) {
-            if (err) throw err;
-            console.log("Successfully moved!");
-          });
-        });
-      });
+
+      await this.sendVerificationEmail(user);
 
       return res.status(201).json({
         Status: `${res.statusCode} Created`,
@@ -86,7 +57,6 @@ class UserController {
           id: user._id,
           email: user.email,
           subscription: user.subscription,
-          avatarURL: user.avatarURL,
         },
       });
     } catch (err) {
@@ -95,12 +65,31 @@ class UserController {
     }
   }
 
+
+  async verifyEmail(req, res, next) {
+    try{
+      const {otpCode}=req.params;
+
+      const userToVerify=await userModel.findByVerificationCode(otpCode);
+       if(!userToVerify){
+         return res.status(404).send('User not found');
+       }
+
+       await userModel.verifyUser(userToVerify._id);
+
+       return res.status(200).send('Verified');
+    }
+    catch(err){
+      console.log(err);
+    }
+  }
+
   async logIn(req, res, next) {
     try {
       const { email, password } = req.body;
       const user = await userModel.findUserByEmail(email);
 
-      if (!user) {
+      if (!user || !user.registered) {
         return res.status(404).json({
           Status: `${res.statusCode} Not Found`,
           "Content-Type": "application/json",
@@ -139,63 +128,6 @@ class UserController {
     } catch (err) {
       next(err);
     }
-  }
-
-  async logOut(req, res, next) {
-    try {
-      const user = req.user;
-      await userModel.updateToken(user._id, null);
-
-      return res.status(200).json({
-        Status: `${res.statusCode} OK`,
-        "Content-Type": "application/json",
-        Method: req.method,
-        ResponseBody: "Logout success",
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  async _updateUser(req, res, next) {
-    try {
-      const id = req.params.id;
-      let updatedUser;
-      if (req.headers["content-type"] === "application/json") {
-        updatedUser = await userModel.findByIdAndUpdate(
-          id,
-          { $set: req.body },
-          { new: true }
-        );
-      } else {
-        updatedUser = await userModel.findByIdAndUpdate(
-          id,
-          { $set: { avatarURL: req.file.filename } },
-          { new: true }
-        );
-      }
-      if (!updatedUser) {
-        return res.status(404).json({ message: "Not found" });
-      }
-      return res.status(200).json(this.userResponse([updatedUser]));
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  validateUpdateUser(req, res, next) {
-    const updateContactRules = Joi.object({
-      email: Joi.string(),
-      password: Joi.string(),
-      subscription: Joi.string(),
-      avatarURL: Joi.string(),
-    });
-    const result = Joi.validate(req.body, updateContactRules);
-    if (result.error) {
-      return res.status(400).json({ message: "missing fields" });
-    }
-
-    next();
   }
 
   validateId(req, res, next) {
@@ -275,9 +207,26 @@ class UserController {
 
   userResponse(users) {
     return users.map((user) => {
-      const { email, subscription, _id, contacts, avatarURL } = user;
-      return { email, subscription, _id, contacts, avatarURL };
+      const { email, subscription, _id, contacts } = user;
+      return { email, subscription, _id, contacts };
     });
+  }
+
+  async sendVerificationEmail(user){
+    const secret = 'KVKFKRCPNZQUYMLXOVYDSQKJKZDTSRLD';
+    const otpCode = totp.generate(secret);
+    const isValid = totp.check(user.token, secret);
+    await userModel.createOtpToken(user._id, otpCode);
+
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    const msg = {
+      to: user.email,
+      from: "tshevtsova.main@gmail.com",
+      subject: "Email verification",
+      text: "Verify you email here",
+      html: `<a href='http://localhost:3000/auth/api/otp/${otpCode}'>Verify you email here</strong>`,
+    };
+    sgMail.send(msg);
   }
 }
 
